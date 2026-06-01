@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1d4ed8">
+    <title>Sistema de Relatório Operacional Diário – Audiovisual</title>
+    <meta name="description" content="Sistema profissional de registro operacional diário para equipes de audiovisual. Controle, monitoramento e relatórios detalhados.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ===== LOADING SCREEN ===== -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Unicesumar — Audiovisual</h2>
+            <p>Carregando módulos...</p>
+        </div>
+    </div>
+
+    <!-- ===== NOTIFICATION CONTAINER ===== -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="material-icons-outlined logo-icon">videocam</span>
+                <div class="logo-text">
+                    <h1>Unicesumar</h1>
+                    <span>Audiovisual</span>
+                </div>
+            </div>
+            <button id="sidebar-toggle-close" class="sidebar-close-btn" aria-label="Fechar menu">
+                <span class="material-icons-outlined">close</span>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="dashboard">
+                <span class="material-icons-outlined">dashboard</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-view="registro">
+                <span class="material-icons-outlined">add_circle_outline</span>
+                <span class="nav-label">Novo Registro</span>
+            </a>
+            <a href="#" class="nav-item" data-view="tabela">
+                <span class="material-icons-outlined">table_chart</span>
+                <span class="nav-label">Tabela Operacional</span>
+            </a>
+            <a href="#" class="nav-item" data-view="relatorio">
+                <span class="material-icons-outlined">summarize</span>
+                <span class="nav-label">Relatório</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-info">
+                <span class="material-icons-outlined">schedule</span>
+                <span id="sidebar-clock">--:--:--</span>
+            </div>
+            <div class="sidebar-footer-info">
+                <span class="material-icons-outlined">calendar_today</span>
+                <span id="sidebar-date">--/--/----</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main id="main-content" class="main-content">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button id="sidebar-toggle-open" class="topbar-btn menu-btn" aria-label="Abrir menu">
+                    <span class="material-icons-outlined">menu</span>
+                </button>
+                <h2 id="page-title" class="topbar-title">Dashboard Operacional</h2>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-search">
+                    <span class="material-icons-outlined">search</span>
+                    <input type="text" id="global-search" placeholder="Pesquisa rápida..." autocomplete="off">
+                </div>
+                <button id="theme-toggle" class="topbar-btn" aria-label="Alternar tema" title="Alternar modo claro/escuro">
+                    <span class="material-icons-outlined" id="theme-icon">dark_mode</span>
+                </button>
+                <button id="btn-fullscreen" class="topbar-btn" aria-label="Tela cheia" title="Tela cheia">
+                    <span class="material-icons-outlined">fullscreen</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ===== DASHBOARD VIEW ===== -->
+        <section id="view-dashboard" class="view active">
+            <!-- KPI CARDS -->
+            <div class="kpi-grid">
+                <div class="kpi-card" id="kpi-total">
+                    <div class="kpi-icon-wrap blue">
+                        <span class="material-icons-outlined">assignment</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-total-val">0</span>
+                        <span class="kpi-label">Total de Demandas</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-concluidas">
+                    <div class="kpi-icon-wrap green">
+                        <span class="material-icons-outlined">check_circle</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-concluidas-val">0</span>
+                        <span class="kpi-label">Concluídas</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-andamento">
+                    <div class="kpi-icon-wrap yellow">
+                        <span class="material-icons-outlined">pending</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-andamento-val">0</span>
+                        <span class="kpi-label">Em Andamento</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-tempo">
+                    <div class="kpi-icon-wrap purple">
+                        <span class="material-icons-outlined">timer</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-tempo-val">0h 0min</span>
+                        <span class="kpi-label">Tempo Total Operacional</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-ativo">
+                    <div class="kpi-icon-wrap teal">
+                        <span class="material-icons-outlined">person</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-ativo-val">—</span>
+                        <span class="kpi-label">Colaborador Mais Ativo</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-local">
+                    <div class="kpi-icon-wrap orange">
+                        <span class="material-icons-outlined">location_on</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-local-val">—</span>
+                        <span class="kpi-label">Local Mais Ativo</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-media">
+                    <div class="kpi-icon-wrap indigo">
+                        <span class="material-icons-outlined">bar_chart</span>
+                    </div>
+                    <div class="kpi-info">
+                        <span class="kpi-value" id="kpi-media-val">0</span>
+                        <span class="kpi-label">Média Diária</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS -->
+            <div class="charts-grid">
+                <div class="chart-card glass-card">
+                    <h3><span class="material-icons-outlined">groups</span> Atividades por Colaborador</h3>
+                    <canvas id="chart-colaborador" width="500" height="300"></canvas>
+                    <p class="chart-empty" id="chart-colab-empty">Nenhum dado disponível</p>
+                </div>
+                <div class="chart-card glass-card">
+                    <h3><span class="material-icons-outlined">donut_large</span> Atividades por Status</h3>
+                    <canvas id="chart-status" width="500" height="300"></canvas>
+                    <p class="chart-empty" id="chart-status-empty">Nenhum dado disponível</p>
+                </div>
+                <div class="chart-card glass-card">
+                    <h3><span class="material-icons-outlined">schedule</span> Tempo Operacional (horas)</h3>
+                    <canvas id="chart-tempo" width="500" height="300"></canvas>
+                    <p class="chart-empty" id="chart-tempo-empty">Nenhum dado disponível</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== REGISTRO VIEW ===== -->
+        <section id="view-registro" class="view">
+            <div class="registro-layout">
+                <!-- FORM -->
+                <div class="form-card glass-card">
+                    <div class="form-header">
+                        <h3><span class="material-icons-outlined">edit_note</span> Registro de Demanda Operacional</h3>
+                    </div>
+                    <form id="activity-form" autocomplete="off">
+                        <input type="hidden" id="edit-id">
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="field-data"><span class="material-icons-outlined">calendar_today</span> Data</label>
+                                <input type="date" id="field-data" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="field-hora"><span class="material-icons-outlined">schedule</span> Hora do Registro</label>
+                                <input type="time" id="field-hora" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="field-colaborador"><span class="material-icons-outlined">person</span> Nome do Colaborador</label>
+                                <input type="text" id="field-colaborador" placeholder="Ex: João Silva" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="field-equipe"><span class="material-icons-outlined">groups</span> Equipe / Setor</label>
+                                <input type="text" id="field-equipe" placeholder="Ex: Audiovisual" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="field-local"><span class="material-icons-outlined">location_on</span> Local da Demanda</label>
+                                <input type="text" id="field-local" placeholder="Ex: Auditório 1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="field-tipo"><span class="material-icons-outlined">category</span> Tipo da Atividade</label>
+                                <select id="field-tipo" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="Manutenção">Manutenção</option>
+                                    <option value="Configuração">Configuração</option>
+                                    <option value="Instalação">Instalação</option>
+                                    <option value="Operação de Evento">Operação de Evento</option>
+                                    <option value="Suporte Técnico">Suporte Técnico</option>
+                                    <option value="Revisão">Revisão</option>
+                                    <option value="Teste">Teste</option>
+                                    <option value="Organização">Organização</option>
+                                    <option value="Treinamento">Treinamento</option>
+                                    <option value="Outro">Outro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="field-descricao"><span class="material-icons-outlined">description</span> Descrição da Atividade</label>
+                            <textarea id="field-descricao" rows="4" placeholder="Descreva detalhadamente a atividade realizada..." required></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="field-inicio"><span class="material-icons-outlined">play_circle</span> Hora de Início</label>
+                                <input type="time" id="field-inicio" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="field-termino"><span class="material-icons-outlined">stop_circle</span> Hora de Término</label>
+                                <input type="time" id="field-termino">
+                            </div>
+                            <div class="form-group">
+                                <label><span class="material-icons-outlined">timelapse</span> Tempo Total</label>
+                                <div class="tempo-total-display" id="tempo-total-display">--h --min</div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="field-status"><span class="material-icons-outlined">flag</span> Status</label>
+                                <select id="field-status" required>
+                                    <option value="Não Iniciada">Não Iniciada</option>
+                                    <option value="Em Andamento">Em Andamento</option>
+                                    <option value="Pausada">Pausada</option>
+                                    <option value="Concluída">Concluída</option>
+                                    <option value="Cancelada">Cancelada</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="field-observacoes"><span class="material-icons-outlined">note</span> Observações</label>
+                                <input type="text" id="field-observacoes" placeholder="Observações adicionais (opcional)">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-salvar">
+                                <span class="material-icons-outlined">save</span> Salvar Registro
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="btn-limpar">
+                                <span class="material-icons-outlined">clear_all</span> Limpar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ÚLTIMOS REGISTROS -->
+                <div class="recent-card glass-card">
+                    <h4><span class="material-icons-outlined">history</span> Últimos Registros</h4>
+                    <ul id="recent-list" class="recent-list">
+                        <li class="empty-state-mini">Nenhum registro recente</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== TABELA VIEW ===== -->
+        <section id="view-tabela" class="view">
+            <div class="table-card glass-card">
+                <!-- FILTERS -->
+                <div class="table-toolbar">
+                    <div class="table-filters">
+                        <div class="filter-group">
+                            <label for="filter-data">Data</label>
+                            <input type="date" id="filter-data">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-colaborador">Colaborador</label>
+                            <input type="text" id="filter-colaborador" placeholder="Filtrar...">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-status">Status</label>
+                            <select id="filter-status">
+                                <option value="">Todos</option>
+                                <option value="Não Iniciada">Não Iniciada</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Pausada">Pausada</option>
+                                <option value="Concluída">Concluída</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-local">Local</label>
+                            <input type="text" id="filter-local" placeholder="Filtrar...">
+                        </div>
+                        <button class="btn btn-sm btn-secondary" id="btn-clear-filters">
+                            <span class="material-icons-outlined">filter_alt_off</span> Limpar Filtros
+                        </button>
+                    </div>
+                    <div class="table-search">
+                        <span class="material-icons-outlined">search</span>
+                        <input type="text" id="table-search" placeholder="Pesquisar na tabela...">
+                    </div>
+                </div>
+
+                <!-- TABLE -->
+                <div class="table-wrapper">
+                    <table id="operations-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="data" class="sortable">Data <span class="sort-icon">↕</span></th>
+                                <th data-sort="hora" class="sortable">Hora <span class="sort-icon">↕</span></th>
+                                <th data-sort="colaborador" class="sortable">Colaborador <span class="sort-icon">↕</span></th>
+                                <th>Local</th>
+                                <th>Atividade</th>
+                                <th>Início</th>
+                                <th>Término</th>
+                                <th data-sort="tempoTotal" class="sortable">Tempo <span class="sort-icon">↕</span></th>
+                                <th data-sort="status" class="sortable">Status <span class="sort-icon">↕</span></th>
+                                <th>Obs.</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr class="empty-row">
+                                <td colspan="11">
+                                    <div class="empty-state">
+                                        <span class="material-icons-outlined">inbox</span>
+                                        <p>Nenhuma atividade registrada</p>
+                                        <span class="empty-hint">Clique em "Novo Registro" para adicionar</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    <span id="table-count">0 registros encontrados</span>
+                    <button class="btn btn-sm btn-danger" id="btn-delete-all" style="display:none;">
+                        <span class="material-icons-outlined">delete_sweep</span> Limpar Tudo
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== RELATÓRIO VIEW ===== -->
+        <section id="view-relatorio" class="view">
+            <div class="report-actions-top">
+                <h3><span class="material-icons-outlined">summarize</span> Relatório Operacional Diário</h3>
+                <div class="report-buttons">
+                    <button class="btn btn-primary" id="btn-gerar-relatorio">
+                        <span class="material-icons-outlined">auto_awesome</span> Gerar Relatório
+                    </button>
+                    <button class="btn btn-secondary" id="btn-export-pdf">
+                        <span class="material-icons-outlined">picture_as_pdf</span> Exportar PDF
+                    </button>
+                    <button class="btn btn-secondary" id="btn-export-print">
+                        <span class="material-icons-outlined">print</span> Imprimir
+                    </button>
+                    <button class="btn btn-secondary" id="btn-export-json">
+                        <span class="material-icons-outlined">data_object</span> Exportar JSON
+                    </button>
+                    <button class="btn btn-secondary" id="btn-export-csv">
+                        <span class="material-icons-outlined">grid_on</span> Exportar CSV
+                    </button>
+                </div>
+            </div>
+
+            <div id="report-content" class="report-content">
+                <div class="report-placeholder">
+                    <span class="material-icons-outlined">description</span>
+                    <p>Clique em <strong>"Gerar Relatório"</strong> para visualizar o relatório operacional do dia.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ===== EDIT MODAL ===== -->
+    <div id="edit-modal" class="modal-overlay" style="display:none;">
+        <div class="modal glass-card">
+            <div class="modal-header">
+                <h3><span class="material-icons-outlined">edit</span> Editar Registro</h3>
+                <button class="modal-close" id="modal-close" aria-label="Fechar">
+                    <span class="material-icons-outlined">close</span>
+                </button>
+            </div>
+            <form id="edit-form">
+                <input type="hidden" id="modal-edit-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modal-status">Status</label>
+                        <select id="modal-status">
+                            <option value="Não Iniciada">Não Iniciada</option>
+                            <option value="Em Andamento">Em Andamento</option>
+                            <option value="Pausada">Pausada</option>
+                            <option value="Concluída">Concluída</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-termino">Hora Término</label>
+                        <input type="time" id="modal-termino">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modal-observacoes">Observações</label>
+                    <input type="text" id="modal-observacoes" placeholder="Observações adicionais">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="material-icons-outlined">save</span> Salvar Alterações
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== CONFIRM MODAL ===== -->
+    <div id="confirm-modal" class="modal-overlay" style="display:none;">
+        <div class="modal modal-sm glass-card">
+            <div class="modal-header">
+                <h3><span class="material-icons-outlined">warning</span> Confirmação</h3>
+            </div>
+            <p id="confirm-message">Tem certeza que deseja excluir este registro?</p>
+            <div class="form-actions">
+                <button class="btn btn-danger" id="confirm-yes">
+                    <span class="material-icons-outlined">delete</span> Confirmar
+                </button>
+                <button class="btn btn-secondary" id="confirm-no">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF generation libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
