@@ -30,12 +30,20 @@ const CHART_PALETTE = [
     '#65a30d', '#9333ea', '#0891b2', '#c2410c', '#6d28d9'
 ];
 
+// ==================== TEAM MAPPING ====================
+// Gatilhos de equipe: ao usar estes termos no campo colaborador,
+// o sistema expande para a lista de membros correspondente.
+
+const TEAM_TRIGGERS = {
+    'equipe inteira noturna': ['Wellington', 'Dionatas', 'João Vitor', 'Maxwel'],
+    'equipe inteira matutina': ['Vinicius', 'João Pedro', 'João Karloto', 'Luiz', 'Lobato']
+};
+
 let activities = [];
 let currentView = 'dashboard';
 let sortColumn = null;
 let sortDirection = 'asc';
 let confirmCallback = null;
-
 
 
 // ==================== DOM REFERENCES ====================
@@ -51,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initClock();
     initNavigation();
     initForm();
-
     initTable();
     initReport();
     initModals();
@@ -81,7 +88,6 @@ function toggleTheme() {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem(THEME_KEY, next);
     updateThemeIcon(next);
-    // Re-render charts with new theme
     renderCharts();
 }
 
@@ -124,7 +130,6 @@ function initNavigation() {
             e.preventDefault();
             const view = item.dataset.view;
             switchView(view, titles[view]);
-            // Close sidebar on mobile
             $('#sidebar').classList.remove('open');
         });
     });
@@ -175,6 +180,29 @@ function loadActivities() {
 
 function saveActivities() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+}
+
+// ==================== HELPER: PARSE COLLABORATORS ====================
+/**
+ * Parses the stored collaborator field and expands team triggers.
+ * "Equipe Inteira Noturna" → Wellington, Dionatas, João Vitor, Maxwel
+ * "Equipe Inteira Matutina" → Vinicius, João Pedro, João Karloto, Luiz, Lobato
+ * Regular names are returned as-is.
+ */
+function parseCollaborators(rawColaborador) {
+    const raw = (rawColaborador || '').trim();
+    if (!raw) return [];
+
+    // Check if it matches a team trigger
+    const triggerKey = raw.toLowerCase();
+    for (const [trigger, members] of Object.entries(TEAM_TRIGGERS)) {
+        if (triggerKey === trigger) {
+            return [...members];
+        }
+    }
+
+    // Otherwise return as single-element array
+    return [raw];
 }
 
 // ==================== FORM ====================
@@ -235,12 +263,13 @@ function handleFormSubmit(e) {
     e.preventDefault();
 
     const editId = $('#edit-id').value;
+
     const data = {
         id:           editId || generateId(),
         data:         $('#field-data').value,
         hora:         $('#field-hora').value,
-        colaborador:  $('#field-colaborador').value.trim(),
-        equipe:       $('#field-equipe').value.trim(),
+        colaborador:  $('#field-colaborador').value,
+        equipe:       $('#field-equipe').value,
         local:        $('#field-local').value.trim(),
         tipo:         $('#field-tipo').value,
         descricao:    $('#field-descricao').value.trim(),
@@ -258,12 +287,10 @@ function handleFormSubmit(e) {
     }
 
     if (editId) {
-        // Update existing
         const idx = activities.findIndex(a => a.id === editId);
         if (idx !== -1) activities[idx] = data;
         notify('Registro atualizado com sucesso!', 'success');
     } else {
-        // Add new
         activities.push(data);
         notify('Atividade registrada com sucesso!', 'success');
     }
@@ -343,7 +370,6 @@ function initTable() {
                 sortColumn = col;
                 sortDirection = 'asc';
             }
-            // Update visual
             $$('th.sortable').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
             th.classList.add(`sort-${sortDirection}`);
             th.querySelector('.sort-icon').textContent = sortDirection === 'asc' ? '↑' : '↓';
@@ -485,19 +511,16 @@ function quickEdit(id) {
 }
 
 function initModals() {
-    // Edit modal
     $('#modal-close')?.addEventListener('click', closeEditModal);
     $('#modal-cancel')?.addEventListener('click', closeEditModal);
     $('#edit-form')?.addEventListener('submit', handleQuickEditSubmit);
 
-    // Confirm modal
     $('#confirm-yes')?.addEventListener('click', () => {
         if (confirmCallback) confirmCallback();
         closeConfirmModal();
     });
     $('#confirm-no')?.addEventListener('click', closeConfirmModal);
 
-    // Close on overlay click
     $('#edit-modal')?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeEditModal();
     });
@@ -567,16 +590,24 @@ function updateRecentList() {
 }
 
 // ==================== DASHBOARD ====================
-
+/**
+ * Dashboard counts each collaborator individually.
+ * If a record has "Wellington, Dionatas", it counts as 1 activity for each.
+ * Team triggers are expanded to individual members.
+ */
 function updateDashboard() {
     const total     = activities.length;
     const concluidas = activities.filter(a => a.status === 'Concluída').length;
     const andamento  = activities.filter(a => a.status === 'Em Andamento').length;
-    const totalMins  = activities.reduce((s, a) => s + (a.tempoTotal || 0), 0);
 
-    // Most active collaborator
+    // Most active collaborator — expand each record's collaborator list
     const colabCount = {};
-    activities.forEach(a => { colabCount[a.colaborador] = (colabCount[a.colaborador] || 0) + 1; });
+    activities.forEach(a => {
+        const names = parseCollaborators(a.colaborador);
+        names.forEach(name => {
+            colabCount[name] = (colabCount[name] || 0) + 1;
+        });
+    });
     const topColab = Object.entries(colabCount).sort((a, b) => b[1] - a[1])[0];
 
     // Most active location
@@ -592,10 +623,12 @@ function updateDashboard() {
     animateValue('kpi-total-val', total);
     animateValue('kpi-concluidas-val', concluidas);
     animateValue('kpi-andamento-val', andamento);
-    $('#kpi-tempo-val').textContent = formatMinutes(totalMins);
-    $('#kpi-ativo-val').textContent = topColab ? topColab[0] : '—';
-    $('#kpi-local-val').textContent = topLocal ? topLocal[0] : '—';
-    $('#kpi-media-val').textContent = avgDaily;
+    const ativoEl = $('#kpi-ativo-val');
+    if (ativoEl) ativoEl.textContent = topColab ? topColab[0] : '—';
+    const localEl = $('#kpi-local-val');
+    if (localEl) localEl.textContent = topLocal ? topLocal[0] : '—';
+    const mediaEl = $('#kpi-media-val');
+    if (mediaEl) mediaEl.textContent = avgDaily;
 
     renderCharts();
 }
@@ -611,7 +644,7 @@ function animateValue(elId, target) {
 
     function step(timestamp) {
         const progress = Math.min((timestamp - start) / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
         el.textContent = Math.round(current + (target - current) * eased);
         if (progress < 1) requestAnimationFrame(step);
     }
@@ -623,7 +656,6 @@ function animateValue(elId, target) {
 function renderCharts() {
     renderCollaboratorChart();
     renderStatusChart();
-    renderTempoChart();
 }
 
 function getChartColors() {
@@ -635,6 +667,10 @@ function getChartColors() {
     };
 }
 
+/**
+ * Collaborator chart counts each individual name separately,
+ * expanding team triggers.
+ */
 function renderCollaboratorChart() {
     const canvas = document.getElementById('chart-colaborador');
     const emptyEl = document.getElementById('chart-colab-empty');
@@ -644,9 +680,14 @@ function renderCollaboratorChart() {
     const dpr = window.devicePixelRatio || 1;
     const colors = getChartColors();
 
-    // Gather data
+    // Gather data — expand collaborators individually
     const counts = {};
-    activities.forEach(a => { counts[a.colaborador] = (counts[a.colaborador] || 0) + 1; });
+    activities.forEach(a => {
+        const names = parseCollaborators(a.colaborador);
+        names.forEach(name => {
+            counts[name] = (counts[name] || 0) + 1;
+        });
+    });
     const labels = Object.keys(counts);
     const values = Object.values(counts);
 
@@ -700,7 +741,6 @@ function renderCollaboratorChart() {
         const barH = (values[i] / maxVal) * chartH;
         const y = padding.top + chartH - barH;
 
-        // Bar gradient
         const gradient = ctx.createLinearGradient(x, y, x, padding.top + chartH);
         const color = CHART_PALETTE[i % CHART_PALETTE.length];
         gradient.addColorStop(0, color);
@@ -812,91 +852,6 @@ function renderStatusChart() {
     });
 }
 
-function renderTempoChart() {
-    const canvas = document.getElementById('chart-tempo');
-    const emptyEl = document.getElementById('chart-tempo-empty');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const colors = getChartColors();
-
-    // Group tempo by date
-    const dateMap = {};
-    activities.forEach(a => {
-        if (!dateMap[a.data]) dateMap[a.data] = 0;
-        dateMap[a.data] += (a.tempoTotal || 0);
-    });
-    const dates = Object.keys(dateMap).sort();
-    const values = dates.map(d => dateMap[d] / 60); // convert to hours
-
-    if (dates.length === 0) {
-        canvas.style.display = 'none';
-        if (emptyEl) emptyEl.style.display = 'block';
-        return;
-    }
-    canvas.style.display = 'block';
-    if (emptyEl) emptyEl.style.display = 'none';
-
-    const w = canvas.parentElement.clientWidth - 48;
-    const h = 280;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, h);
-
-    const padding = { top: 20, right: 20, bottom: 50, left: 55 };
-    const chartW = w - padding.left - padding.right;
-    const chartH = h - padding.top - padding.bottom;
-    const maxVal = Math.max(...values, 0.5);
-    const barW = Math.min(48, (chartW / dates.length) * .6);
-    const gap = (chartW - barW * dates.length) / (dates.length + 1);
-
-    // Grid
-    ctx.strokeStyle = colors.grid;
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-        const y = padding.top + chartH - (chartH * i / 4);
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(w - padding.right, y);
-        ctx.stroke();
-
-        ctx.fillStyle = colors.text;
-        ctx.font = '11px Inter';
-        ctx.textAlign = 'right';
-        ctx.fillText((maxVal * i / 4).toFixed(1) + 'h', padding.left - 8, y + 4);
-    }
-
-    // Bars
-    dates.forEach((date, i) => {
-        const x = padding.left + gap + i * (barW + gap);
-        const barH = (values[i] / maxVal) * chartH;
-        const y = padding.top + chartH - barH;
-
-        const gradient = ctx.createLinearGradient(x, y, x, padding.top + chartH);
-        gradient.addColorStop(0, '#7c3aed');
-        gradient.addColorStop(1, '#7c3aed55');
-        ctx.fillStyle = gradient;
-        roundRect(ctx, x, y, barW, barH, 4);
-        ctx.fill();
-
-        // Value
-        ctx.fillStyle = colors.text;
-        ctx.font = 'bold 11px Inter';
-        ctx.textAlign = 'center';
-        ctx.fillText(values[i].toFixed(1) + 'h', x + barW / 2, y - 6);
-
-        // Date label
-        ctx.font = '10px Inter';
-        const parts = date.split('-');
-        const dateLabel = `${parts[2]}/${parts[1]}`;
-        ctx.fillText(dateLabel, x + barW / 2, padding.top + chartH + 16);
-    });
-}
-
 function roundRect(ctx, x, y, w, h, r) {
     if (h <= 0) { ctx.beginPath(); return; }
     r = Math.min(r, h / 2, w / 2);
@@ -932,6 +887,11 @@ function initReport() {
     $('#btn-export-csv')?.addEventListener('click', exportCSV);
 }
 
+/**
+ * Generates the on-screen report (Relatório tab).
+ * Team triggers are expanded: "equipe inteira noturna" becomes individual member names
+ * with distributed hours. No total hours shown in this view.
+ */
 function generateReport() {
     const container = $('#report-content');
     if (!container) return;
@@ -950,15 +910,18 @@ function generateReport() {
     const total = activities.length;
     const concluidas = activities.filter(a => a.status === 'Concluída').length;
     const pendentes = activities.filter(a => a.status !== 'Concluída' && a.status !== 'Cancelada').length;
-    const totalMins = activities.reduce((s, a) => s + (a.tempoTotal || 0), 0);
-    const mediaMins = total > 0 ? Math.round(totalMins / total) : 0;
 
-    // Per collaborator
+    // Per collaborator — expand team triggers and distribute hours
     const colabData = {};
     activities.forEach(a => {
-        if (!colabData[a.colaborador]) colabData[a.colaborador] = { count: 0, mins: 0 };
-        colabData[a.colaborador].count++;
-        colabData[a.colaborador].mins += (a.tempoTotal || 0);
+        const names = parseCollaborators(a.colaborador);
+        const numMembers = names.length;
+        const minsEach = numMembers > 0 ? Math.round((a.tempoTotal || 0) / numMembers) : 0;
+        names.forEach(name => {
+            if (!colabData[name]) colabData[name] = { count: 0, mins: 0 };
+            colabData[name].count++;
+            colabData[name].mins += minsEach;
+        });
     });
 
     // Per location
@@ -967,7 +930,7 @@ function generateReport() {
         localData[a.local] = (localData[a.local] || 0) + 1;
     });
 
-    // Timeline (sorted)
+    // Timeline (sorted) — expand team triggers for display
     const timeline = [...activities].sort((a, b) => {
         if (a.data !== b.data) return a.data.localeCompare(b.data);
         return (a.inicio || '').localeCompare(b.inicio || '');
@@ -977,11 +940,10 @@ function generateReport() {
         <!-- REPORT HEADER -->
         <div class="report-header animate-slide">
             <h2>RELATÓRIO OPERACIONAL DIÁRIO</h2>
-            <p>Unicesumar — Audiovisual</p>
             <p style="margin-top:4px;font-weight:600;color:var(--text-primary);">${today}</p>
         </div>
 
-        <!-- RESUMO GERAL -->
+        <!-- RESUMO GERAL (sem horas) -->
         <div class="report-section animate-slide">
             <div class="report-section-title">
                 <span class="material-icons-outlined">assessment</span> Resumo Geral
@@ -999,18 +961,10 @@ function generateReport() {
                     <div class="report-kpi-value">${pendentes}</div>
                     <div class="report-kpi-label">Pendentes</div>
                 </div>
-                <div class="report-kpi">
-                    <div class="report-kpi-value">${formatMinutes(totalMins)}</div>
-                    <div class="report-kpi-label">Horas Trabalhadas</div>
-                </div>
-                <div class="report-kpi">
-                    <div class="report-kpi-value">${formatMinutes(mediaMins)}</div>
-                    <div class="report-kpi-label">Média por Atividade</div>
-                </div>
             </div>
         </div>
 
-        <!-- RESUMO POR COLABORADOR -->
+        <!-- RESUMO POR COLABORADOR (com horas distribuídas) -->
         <div class="report-section animate-slide">
             <div class="report-section-title">
                 <span class="material-icons-outlined">groups</span> Resumo por Colaborador
@@ -1020,7 +974,6 @@ function generateReport() {
                     <tr>
                         <th>Colaborador</th>
                         <th>Demandas</th>
-                        <th>Tempo Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1028,7 +981,6 @@ function generateReport() {
                         <tr>
                             <td><strong>${escapeHtml(name)}</strong></td>
                             <td>${d.count}</td>
-                            <td>${formatMinutes(d.mins)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -1058,32 +1010,35 @@ function generateReport() {
             </table>
         </div>
 
-        <!-- LINHA DO TEMPO -->
+        <!-- LINHA DO TEMPO (team triggers expanded) -->
         <div class="report-section animate-slide">
             <div class="report-section-title">
                 <span class="material-icons-outlined">timeline</span> Linha do Tempo Operacional
             </div>
             <div class="timeline">
-                ${timeline.map(a => `
+                ${timeline.map(a => {
+                    const horarioRange = (a.inicio && a.termino) 
+                        ? `${a.inicio} — ${a.termino}` 
+                        : (a.inicio || a.hora);
+                    // Expand team triggers for display
+                    const displayNames = parseCollaborators(a.colaborador);
+                    const displayColaborador = displayNames.join(', ');
+                    return `
                     <div class="timeline-item">
-                        <span class="timeline-time">${a.inicio || a.hora}</span>
+                        <span class="timeline-time">${horarioRange}</span>
                         <div class="timeline-desc">${escapeHtml(a.tipo)} — ${escapeHtml(a.descricao)}</div>
                         <div class="timeline-meta">
                             <span class="status-badge ${STATUS_MAP[a.status] || ''}" style="font-size:.65rem;padding:2px 8px;">${a.status}</span>
-                            &nbsp; ${escapeHtml(a.colaborador)} · ${escapeHtml(a.local)}
-                            ${a.tempoTotal > 0 ? ' · ' + formatMinutes(a.tempoTotal) : ''}
+                            &nbsp; ${escapeHtml(displayColaborador)} · ${escapeHtml(a.local)}
                         </div>
-                    </div>
-                `).join('')}
+                    </div>`;
+                }).join('')}
             </div>
         </div>
 
         <!-- FOOTER -->
-        <div style="text-align:center;padding:24px 0 8px;border-top:1px solid var(--border-color);margin-top:32px;">
-            <p style="font-size:.78rem;color:var(--text-muted);">
-                Relatório gerado automaticamente — Unicesumar — Audiovisual<br>
-                ${new Date().toLocaleString('pt-BR')}
-            </p>
+        <div style="text-align:center;padding:16px 0 4px;border-top:1px solid var(--border-color);margin-top:24px;">
+            <p style="font-size:.75rem;color:var(--text-muted);">Unicesumar — Audiovisual</p>
         </div>
     `;
 
@@ -1092,15 +1047,10 @@ function generateReport() {
 
 // ==================== EXPORTS ====================
 
-/**
- * Carrega um script externo dinamicamente e retorna uma Promise.
- */
 function loadScript(url) {
     return new Promise((resolve, reject) => {
-        // Verifica se já foi carregado
         const existing = document.querySelector(`script[src="${url}"]`);
         if (existing) { resolve(); return; }
-
         const script = document.createElement('script');
         script.src = url;
         script.onload = resolve;
@@ -1109,9 +1059,6 @@ function loadScript(url) {
     });
 }
 
-/**
- * Garante que html2canvas e jsPDF estejam carregados.
- */
 async function ensurePdfLibs() {
     if (typeof html2canvas === 'undefined') {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
@@ -1122,13 +1069,13 @@ async function ensurePdfLibs() {
 }
 
 /**
- * Exportar relatório como PDF real para download.
+ * Export PDF — generates a dedicated PDF report.
+ * CORE LOGIC: Team triggers (equipe inteira noturna/matutina) are HIDDEN in the output.
+ * Instead, the individual member names are shown with distributed hours.
  */
 async function exportPDF() {
-    // Gera o relatório se ainda não gerado
-    if ($('#report-content .report-placeholder')) {
-        generateReport();
-    }
+    // First generate the PDF-specific report content
+    generatePDFReport();
 
     const reportEl = $('#report-content');
     if (!reportEl || activities.length === 0) {
@@ -1139,16 +1086,12 @@ async function exportPDF() {
     notify('Preparando PDF, aguarde...', 'info');
 
     try {
-        // Tenta carregar as bibliotecas dinamicamente
         await ensurePdfLibs();
-
         const { jsPDF } = window.jspdf;
 
-        // Forçar modo claro para captura limpa
+        // Force light mode for clean capture
         const currentTheme = document.documentElement.getAttribute('data-theme');
         document.documentElement.setAttribute('data-theme', 'light');
-
-        // Aguarda repaint do tema claro
         await new Promise(r => setTimeout(r, 200));
 
         const canvas = await html2canvas(reportEl, {
@@ -1160,23 +1103,21 @@ async function exportPDF() {
             windowWidth: 900
         });
 
-        // Restaurar tema
+        // Restore theme
         document.documentElement.setAttribute('data-theme', currentTheme);
 
         const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; // A4 largura em mm
-        const pageHeight = 297; // A4 altura em mm
+        const imgWidth = 210;
+        const pageHeight = 297;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
         const pdf = new jsPDF('p', 'mm', 'a4');
         let heightLeft = imgHeight;
         let position = 0;
 
-        // Primeira página
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
 
-        // Páginas adicionais se o conteúdo ultrapassar
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
@@ -1190,101 +1131,292 @@ async function exportPDF() {
 
     } catch (err) {
         console.error('Erro ao gerar PDF com bibliotecas:', err);
-        // Restaurar tema em caso de erro
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (currentTheme !== localStorage.getItem(THEME_KEY)) {
             document.documentElement.setAttribute('data-theme', localStorage.getItem(THEME_KEY) || 'light');
         }
-
-        // FALLBACK: Gerar HTML standalone para download
         notify('Gerando PDF alternativo...', 'info');
         exportPDFfallback();
     }
 }
 
 /**
- * Fallback robusto: gera um HTML completo standalone como arquivo para impressão/PDF.
- * Abre em nova janela com botão de download automático.
+ * Generates the PDF-specific report content.
+ * Team triggers are expanded and hours are distributed.
+ * No total hours displayed. No trigger text visible.
+ */
+function generatePDFReport() {
+    const container = $('#report-content');
+    if (!container || activities.length === 0) return;
+
+    const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const total = activities.length;
+    const concluidas = activities.filter(a => a.status === 'Concluída').length;
+    const pendentes = activities.filter(a => a.status !== 'Concluída' && a.status !== 'Cancelada').length;
+
+    // Per collaborator — expand and distribute
+    const colabData = {};
+    activities.forEach(a => {
+        const names = parseCollaborators(a.colaborador);
+        const numMembers = names.length;
+        const minsEach = numMembers > 0 ? Math.round((a.tempoTotal || 0) / numMembers) : 0;
+        names.forEach(name => {
+            if (!colabData[name]) colabData[name] = { count: 0, mins: 0 };
+            colabData[name].count++;
+            colabData[name].mins += minsEach;
+        });
+    });
+
+    // Per location
+    const localData = {};
+    activities.forEach(a => {
+        localData[a.local] = (localData[a.local] || 0) + 1;
+    });
+
+    // Timeline sorted
+    const timeline = [...activities].sort((a, b) => {
+        if (a.data !== b.data) return a.data.localeCompare(b.data);
+        return (a.inicio || '').localeCompare(b.inicio || '');
+    });
+
+    container.innerHTML = `
+        <div class="report-header">
+            <h2>RELATÓRIO OPERACIONAL DIÁRIO</h2>
+            <p style="margin-top:4px;font-weight:600;color:var(--text-primary);">${today}</p>
+        </div>
+
+        <div class="report-section">
+            <div class="report-section-title">
+                <span class="material-icons-outlined">assessment</span> Resumo Geral
+            </div>
+            <div class="report-kpi-grid">
+                <div class="report-kpi">
+                    <div class="report-kpi-value">${total}</div>
+                    <div class="report-kpi-label">Total de Atividades</div>
+                </div>
+                <div class="report-kpi">
+                    <div class="report-kpi-value">${concluidas}</div>
+                    <div class="report-kpi-label">Concluídas</div>
+                </div>
+                <div class="report-kpi">
+                    <div class="report-kpi-value">${pendentes}</div>
+                    <div class="report-kpi-label">Pendentes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div class="report-section-title">
+                <span class="material-icons-outlined">groups</span> Resumo por Colaborador
+            </div>
+            <table class="report-mini-table">
+                <thead>
+                    <tr>
+                        <th>Colaborador</th>
+                        <th>Demandas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(colabData).sort((a, b) => b[1].count - a[1].count).map(([name, d]) => `
+                        <tr>
+                            <td><strong>${escapeHtml(name)}</strong></td>
+                            <td>${d.count}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <div class="report-section-title">
+                <span class="material-icons-outlined">location_on</span> Resumo por Local
+            </div>
+            <table class="report-mini-table">
+                <thead>
+                    <tr>
+                        <th>Local</th>
+                        <th>Atividades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(localData).sort((a, b) => b[1] - a[1]).map(([loc, count]) => `
+                        <tr>
+                            <td><strong>${escapeHtml(loc)}</strong></td>
+                            <td>${count}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <div class="report-section-title">
+                <span class="material-icons-outlined">timeline</span> Linha do Tempo Operacional
+            </div>
+            <div class="timeline">
+                ${timeline.map(a => {
+                    const horarioRange = (a.inicio && a.termino) 
+                        ? `${a.inicio} — ${a.termino}` 
+                        : (a.inicio || a.hora);
+                    const displayNames = parseCollaborators(a.colaborador);
+                    const displayColaborador = displayNames.join(', ');
+                    return `
+                    <div class="timeline-item">
+                        <span class="timeline-time">${horarioRange}</span>
+                        <div class="timeline-desc">${escapeHtml(a.tipo)} — ${escapeHtml(a.descricao)}</div>
+                        <div class="timeline-meta">
+                            <span class="status-badge ${STATUS_MAP[a.status] || ''}" style="font-size:.65rem;padding:2px 8px;">${a.status}</span>
+                            &nbsp; ${escapeHtml(displayColaborador)} · ${escapeHtml(a.local)}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+
+        <div style="text-align:center;padding:16px 0 4px;border-top:1px solid var(--border-color);margin-top:24px;">
+            <p style="font-size:.75rem;color:var(--text-muted);">Unicesumar — Audiovisual</p>
+        </div>
+    `;
+}
+
+/**
+ * Fallback PDF export: generates standalone HTML with expanded team names.
  */
 function exportPDFfallback() {
+    // Re-generate report with expanded names
+    generatePDFReport();
+
     const reportHTML = $('#report-content')?.innerHTML || '';
     if (!reportHTML) {
         notify('Gere o relatório primeiro.', 'warning');
         return;
     }
 
-    // Monta documento HTML standalone completo
     const fullHTML = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório Operacional Diário — Unicesumar Audiovisual — ${new Date().toLocaleDateString('pt-BR')}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Relatório Operacional Diário</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #fff; color: #0f172a; line-height: 1.6;
-            padding: 24px 32px; max-width: 900px; margin: 0 auto;
+            font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: #fff; color: #1a1a2e; line-height: 1.65;
+            padding: 28px 36px; max-width: 850px; margin: 0 auto;
+            font-size: 13px;
         }
-        .no-print { text-align: center; margin-bottom: 24px; }
+
+        .no-print {
+            text-align: center; margin-bottom: 28px;
+            padding: 16px; background: #f0f4ff; border-radius: 10px;
+            border: 1px solid #dbe4ff;
+        }
         .no-print button {
-            padding: 12px 28px; font-size: 1rem; font-weight: 700;
+            padding: 12px 32px; font-size: 14px; font-weight: 700;
             background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff;
             border: none; border-radius: 8px; cursor: pointer;
-            font-family: inherit; margin: 0 8px;
+            font-family: 'Inter', sans-serif; letter-spacing: 0.3px;
         }
-        .no-print button:hover { opacity: .9; }
-        .no-print p { font-size: .85rem; color: #64748b; margin-top: 8px; }
+        .no-print button:hover { opacity: .9; transform: translateY(-1px); }
+        .no-print p { font-size: 12px; color: #6b7280; margin-top: 8px; }
 
-        .report-header { text-align: center; padding: 20px 0 16px; border-bottom: 2px solid #bfdbfe; margin-bottom: 24px; }
-        .report-header h2 { font-size: 1.3rem; font-weight: 800; color: #1d4ed8; }
-        .report-header p { color: #64748b; font-size: .85rem; }
-        .report-section { margin-bottom: 28px; }
+        .report-header {
+            text-align: center; padding: 20px 0 16px;
+            border-bottom: 3px solid #2563eb; margin-bottom: 28px;
+        }
+        .report-header h2 {
+            font-size: 18px; font-weight: 800; color: #1d4ed8;
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .report-header p {
+            color: #4b5563; font-size: 13px; margin-top: 4px; font-weight: 500;
+        }
+
+        .report-section { margin-bottom: 24px; page-break-inside: avoid; }
         .report-section-title {
-            display: flex; align-items: center; gap: 8px;
-            font-size: .95rem; font-weight: 700; color: #1d4ed8;
-            padding-bottom: 8px; border-bottom: 2px solid #bfdbfe; margin-bottom: 14px;
+            font-size: 14px; font-weight: 700; color: #1d4ed8;
+            padding-bottom: 6px; border-bottom: 2px solid #93c5fd;
+            margin-bottom: 12px; letter-spacing: 0.3px;
         }
-        .report-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px; margin-bottom: 8px; }
+
+        .report-kpi-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 10px; margin-bottom: 8px;
+        }
         .report-kpi {
-            text-align: center; padding: 14px; background: #f8fafc;
-            border-radius: 8px; border: 1px solid #e2e8f0;
+            text-align: center; padding: 12px 8px;
+            background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;
         }
-        .report-kpi-value { font-size: 1.4rem; font-weight: 800; color: #2563eb; }
-        .report-kpi-label { font-size: .7rem; color: #64748b; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; margin-top: 4px; }
+        .report-kpi-value { font-size: 20px; font-weight: 800; color: #1d4ed8; }
+        .report-kpi-label {
+            font-size: 9px; color: #6b7280; text-transform: uppercase;
+            letter-spacing: 0.6px; font-weight: 600; margin-top: 3px;
+        }
 
-        table, .report-mini-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 8px; }
-        th { text-align: left; padding: 8px 12px; background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: .75rem; text-transform: uppercase; border-bottom: 2px solid #bfdbfe; }
-        td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #475569; }
+        table, .report-mini-table {
+            width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px;
+        }
+        th {
+            text-align: left; padding: 8px 12px;
+            background: #eff6ff; color: #1d4ed8;
+            font-weight: 700; font-size: 11px; text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 2px solid #93c5fd;
+        }
+        td {
+            padding: 7px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;
+            font-size: 12px;
+        }
+        tr:last-child td { border-bottom: none; }
+        td strong { color: #1a1a2e; }
 
-        .timeline { position: relative; padding-left: 28px; }
-        .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #bfdbfe; }
-        .timeline-item { position: relative; margin-bottom: 16px; padding: 10px 14px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
-        .timeline-item::before { content: ''; position: absolute; left: -24px; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: #2563eb; border: 2px solid #fff; }
-        .timeline-time { font-weight: 700; color: #2563eb; font-size: .82rem; }
-        .timeline-desc { font-size: .82rem; color: #475569; margin-top: 2px; }
-        .timeline-meta { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+        .timeline { position: relative; padding-left: 24px; }
+        .timeline::before {
+            content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+            width: 2px; background: #93c5fd; border-radius: 2px;
+        }
+        .timeline-item {
+            position: relative; margin-bottom: 14px;
+            padding: 10px 14px; background: #f9fafb;
+            border-radius: 6px; border: 1px solid #e5e7eb;
+            page-break-inside: avoid;
+        }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -21px; top: 13px;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #2563eb; border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #93c5fd;
+        }
+        .timeline-time {
+            font-weight: 700; color: #1d4ed8; font-size: 13px;
+            font-family: 'Inter', monospace;
+        }
+        .timeline-desc { font-size: 12px; color: #374151; margin-top: 3px; font-weight: 500; }
+        .timeline-meta { font-size: 11px; color: #6b7280; margin-top: 3px; }
 
         .status-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 2px 8px; border-radius: 12px;
-            font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
-            border: 1px solid #ccc;
+            display: inline-block; padding: 1px 8px; border-radius: 10px;
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .status-badge.concluida { background: #d1fae5; color: #059669; border-color: #86efac; }
-        .status-badge.em-andamento { background: #fef3c7; color: #d97706; border-color: #fde047; }
-        .status-badge.nao-iniciada { background: #e0f2fe; color: #0284c7; border-color: #7dd3fc; }
-        .status-badge.pausada { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
-        .status-badge.cancelada { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .status-badge.concluida { background: #d1fae5; color: #047857; }
+        .status-badge.em-andamento { background: #fef3c7; color: #b45309; }
+        .status-badge.nao-iniciada { background: #dbeafe; color: #1d4ed8; }
+        .status-badge.pausada { background: #f3f4f6; color: #4b5563; }
+        .status-badge.cancelada { background: #fee2e2; color: #b91c1c; }
 
         .animate-slide { animation: none; }
         .material-icons-outlined { display: none; }
 
         @media print {
             .no-print { display: none !important; }
-            body { padding: 0; }
+            body { padding: 16px 20px; font-size: 12px; }
+            .report-header { page-break-after: avoid; }
+            .report-section { page-break-inside: avoid; }
+            .timeline-item { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -1297,31 +1429,25 @@ function exportPDFfallback() {
 </body>
 </html>`;
 
-    // Cria Blob e abre em nova aba
     const blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const newWindow = window.open(url, '_blank');
 
     if (newWindow) {
-        // Aguarda carregar e dispara impressão automaticamente
         newWindow.addEventListener('load', () => {
-            setTimeout(() => {
-                newWindow.print();
-            }, 500);
+            setTimeout(() => { newWindow.print(); }, 600);
         });
-        notify('Relatório aberto em nova aba. Use "Salvar como PDF" na janela de impressão.', 'success');
+        notify('Relatório aberto em nova aba. Use "Salvar como PDF" para baixar.', 'success');
     } else {
-        // Se popup bloqueado, oferece download direto do HTML
         downloadBlob(blob, `relatorio_operacional_${getDateStr()}.html`);
-        notify('Arquivo HTML do relatório baixado. Abra e use Ctrl+P para salvar como PDF.', 'info');
+        notify('Arquivo do relatório baixado. Abra e use Ctrl+P para salvar como PDF.', 'info');
     }
 }
 
 function exportPrint() {
     if ($('#report-content .report-placeholder')) {
-        generateReport();
+        generatePDFReport();
     }
-    // Switch to report view for print
     switchView('relatorio', 'Relatório Operacional Diário');
     setTimeout(() => window.print(), 300);
 }
@@ -1331,7 +1457,16 @@ function exportJSON() {
         notify('Nenhum dado para exportar.', 'warning');
         return;
     }
-    const blob = new Blob([JSON.stringify(activities, null, 2)], { type: 'application/json' });
+
+    // Expand team triggers in export
+    const expandedData = activities.map(a => {
+        const expanded = { ...a };
+        const names = parseCollaborators(a.colaborador);
+        expanded.colaboradores_expandidos = names;
+        return expanded;
+    });
+
+    const blob = new Blob([JSON.stringify(expandedData, null, 2)], { type: 'application/json' });
     downloadBlob(blob, `relatorio_operacional_${getDateStr()}.json`);
     notify('Arquivo JSON exportado com sucesso!', 'success');
 }
@@ -1342,15 +1477,20 @@ function exportCSV() {
         return;
     }
 
-    const headers = ['Data', 'Hora', 'Colaborador', 'Equipe', 'Local', 'Tipo', 'Descrição', 'Início', 'Término', 'Tempo Total (min)', 'Status', 'Observações'];
-    const rows = activities.map(a => [
-        a.data, a.hora, a.colaborador, a.equipe, a.local, a.tipo,
-        `"${(a.descricao || '').replace(/"/g, '""')}"`,
-        a.inicio, a.termino,
-        a.tempoTotal || 0,
-        a.status,
-        `"${(a.observacoes || '').replace(/"/g, '""')}"`
-    ]);
+    const headers = ['Data', 'Hora', 'Colaborador', 'Colaboradores Expandidos', 'Equipe', 'Local', 'Tipo', 'Descrição', 'Início', 'Término', 'Tempo Total (min)', 'Status', 'Observações'];
+    const rows = activities.map(a => {
+        const names = parseCollaborators(a.colaborador);
+        return [
+            a.data, a.hora, a.colaborador,
+            `"${names.join(', ')}"`,
+            a.equipe, a.local, a.tipo,
+            `"${(a.descricao || '').replace(/"/g, '""')}"`,
+            a.inicio, a.termino,
+            a.tempoTotal || 0,
+            a.status,
+            `"${(a.observacoes || '').replace(/"/g, '""')}"`
+        ];
+    });
 
     const csv = '\uFEFF' + headers.join(';') + '\n' + rows.map(r => r.join(';')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1376,7 +1516,6 @@ function initGlobalSearch() {
         const query = e.target.value.trim().toLowerCase();
         if (!query) return;
 
-        // Switch to table view and search there
         switchView('tabela', 'Tabela Operacional');
         $('#table-search').value = query;
         renderTable();
@@ -1406,7 +1545,6 @@ function notify(message, type = 'info') {
 
     container.appendChild(notif);
 
-    // Auto-dismiss after 4s
     setTimeout(() => {
         notif.classList.add('hide');
         setTimeout(() => notif.remove(), 300);
