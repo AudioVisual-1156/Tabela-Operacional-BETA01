@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,11 +9,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1d4ed8">
     <title>Sistema de Relatório Operacional Diário – Audiovisual</title>
-    <meta name="description" content="Sistema profissional de registro operacional diário para equipes de audiovisual. Controle, monitoramento e relatórios detalhados.">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="description"
+        content="Sistema profissional de registro operacional diário para equipes de audiovisual. Controle, monitoramento e relatórios detalhados.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <!-- ===== LOADING SCREEN ===== -->
@@ -89,7 +93,8 @@
                     <span class="material-icons-outlined">search</span>
                     <input type="text" id="global-search" placeholder="Pesquisa rápida..." autocomplete="off">
                 </div>
-                <button id="theme-toggle" class="topbar-btn" aria-label="Alternar tema" title="Alternar modo claro/escuro">
+                <button id="theme-toggle" class="topbar-btn" aria-label="Alternar tema"
+                    title="Alternar modo claro/escuro">
                     <span class="material-icons-outlined" id="theme-icon">dark_mode</span>
                 </button>
                 <button id="btn-fullscreen" class="topbar-btn" aria-label="Tela cheia" title="Tela cheia">
@@ -200,61 +205,81 @@
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="field-data"><span class="material-icons-outlined">calendar_today</span> Data</label>
+                                <label for="field-data"><span class="material-icons-outlined">calendar_today</span>
+                                    Data</label>
                                 <input type="date" id="field-data" required>
                             </div>
                             <div class="form-group">
-                                <label for="field-hora"><span class="material-icons-outlined">schedule</span> Hora do Registro</label>
+                                <label for="field-hora"><span class="material-icons-outlined">schedule</span> Hora do
+                                    Registro</label>
                                 <input type="time" id="field-hora" required>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="field-colaborador"><span class="material-icons-outlined">person</span> Nome do Colaborador</label>
-                                <input type="text" id="field-colaborador" placeholder="Ex: João Silva" required>
+                                <label for="field-colaborador"><span class="material-icons-outlined">person</span> Nome
+                                    do Colaborador</label>
+                                <select id="field-colaborador" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="Wellington">Wellington</option>
+                                    <option value="Dionatas">Dionatas</option>
+                                    <option value="Maxwel">Maxwel</option>
+                                    <option value="João Vitor">João Vitor</option>
+                                    <option value="Alef">Alef</option>
+                                    <option value="Vinicius">Vinicius</option>
+                                    <option value="João Pedro">João Pedro</option>
+                                    <option value="Luiz">Luiz</option>
+                                    <option value="João Karloto">João Karloto</option>
+                                    <option value="Equipe Inteira">Equipe Inteira Noturna</option>
+                                    <option value="Equipe Inteira">Equipe Inteira Matutino</option>
+                                </select>
                             </div>
                             <div class="form-group">
-                                <label for="field-equipe"><span class="material-icons-outlined">groups</span> Equipe / Setor</label>
+                                <label for="field-equipe"><span class="material-icons-outlined">groups</span> Equipe /
+                                    Setor</label>
                                 <input type="text" id="field-equipe" placeholder="Ex: Audiovisual" required>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="field-local"><span class="material-icons-outlined">location_on</span> Local da Demanda</label>
-                                <input type="text" id="field-local" placeholder="Ex: Auditório 1" required>
+                                <label for="field-local"><span class="material-icons-outlined">location_on</span> Local
+                                    da Demanda</label>
+                                <input type="text" id="field-local" placeholder="Ex: Auditório Dona Etelvina" required>
                             </div>
                             <div class="form-group">
-                                <label for="field-tipo"><span class="material-icons-outlined">category</span> Tipo da Atividade</label>
+                                <label for="field-tipo"><span class="material-icons-outlined">category</span> Tipo da
+                                    Atividade</label>
                                 <select id="field-tipo" required>
                                     <option value="">Selecione...</option>
                                     <option value="Manutenção">Manutenção</option>
-                                    <option value="Configuração">Configuração</option>
+                                    <option value="Configuração">Abertura de Reservas</option>
                                     <option value="Instalação">Instalação</option>
-                                    <option value="Operação de Evento">Operação de Evento</option>
-                                    <option value="Suporte Técnico">Suporte Técnico</option>
+                                    <option value="Platão Técnico">Platão Auditório</option>
                                     <option value="Revisão">Revisão</option>
-                                    <option value="Teste">Teste</option>
-                                    <option value="Organização">Organização</option>
-                                    <option value="Treinamento">Treinamento</option>
+                                    <option value="Teste">Plantão</option>
                                     <option value="Outro">Outro</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="form-group full-width">
-                            <label for="field-descricao"><span class="material-icons-outlined">description</span> Descrição da Atividade</label>
-                            <textarea id="field-descricao" rows="4" placeholder="Descreva detalhadamente a atividade realizada..." required></textarea>
+                            <label for="field-descricao"><span class="material-icons-outlined">description</span>
+                                Descrição da Atividade</label>
+                            <textarea id="field-descricao" rows="4"
+                                placeholder="Descreva detalhadamente a atividade realizada..." required></textarea>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="field-inicio"><span class="material-icons-outlined">play_circle</span> Hora de Início</label>
+                                <label for="field-inicio"><span class="material-icons-outlined">play_circle</span> Hora
+                                    de Início</label>
                                 <input type="time" id="field-inicio" required>
                             </div>
                             <div class="form-group">
-                                <label for="field-termino"><span class="material-icons-outlined">stop_circle</span> Hora de Término</label>
+                                <label for="field-termino"><span class="material-icons-outlined">stop_circle</span> Hora
+                                    de Término</label>
                                 <input type="time" id="field-termino">
                             </div>
                             <div class="form-group">
@@ -265,7 +290,8 @@
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="field-status"><span class="material-icons-outlined">flag</span> Status</label>
+                                <label for="field-status"><span class="material-icons-outlined">flag</span>
+                                    Status</label>
                                 <select id="field-status" required>
                                     <option value="Não Iniciada">Não Iniciada</option>
                                     <option value="Em Andamento">Em Andamento</option>
@@ -275,8 +301,10 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="field-observacoes"><span class="material-icons-outlined">note</span> Observações</label>
-                                <input type="text" id="field-observacoes" placeholder="Observações adicionais (opcional)">
+                                <label for="field-observacoes"><span class="material-icons-outlined">note</span>
+                                    Observações</label>
+                                <input type="text" id="field-observacoes"
+                                    placeholder="Observações adicionais (opcional)">
                             </div>
                         </div>
 
@@ -347,7 +375,8 @@
                             <tr>
                                 <th data-sort="data" class="sortable">Data <span class="sort-icon">↕</span></th>
                                 <th data-sort="hora" class="sortable">Hora <span class="sort-icon">↕</span></th>
-                                <th data-sort="colaborador" class="sortable">Colaborador <span class="sort-icon">↕</span></th>
+                                <th data-sort="colaborador" class="sortable">Colaborador <span
+                                        class="sort-icon">↕</span></th>
                                 <th>Local</th>
                                 <th>Atividade</th>
                                 <th>Início</th>
@@ -476,4 +505,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>
