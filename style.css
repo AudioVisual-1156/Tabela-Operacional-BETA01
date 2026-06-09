@@ -488,6 +488,73 @@ input, select, textarea { font-family: inherit; font-size: .9rem; }
 }
 .form-group textarea { resize: vertical; min-height: 90px; }
 
+/* Checkbox Group — Equipe / Setor */
+.checkbox-group {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
+}
+.checkbox-group:focus-within {
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
+
+.checkbox-label {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    font-size: .875rem; font-weight: 500;
+    color: var(--text-secondary);
+    transition: color var(--transition);
+    user-select: none;
+}
+.checkbox-label:hover { color: var(--text-primary); }
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: var(--primary-600);
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+/* Team Toggle Labels & Divider */
+.team-toggle-label {
+    font-weight: 700 !important;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
+    width: 100%;
+    flex-basis: 100%;
+}
+.team-toggle-label.noturna {
+    background: var(--indigo-light);
+    color: var(--indigo) !important;
+    border: 1px solid rgba(79,70,229,.2);
+}
+.team-toggle-label.matutina {
+    background: var(--warning-light);
+    color: var(--warning) !important;
+    border: 1px solid rgba(217,119,6,.2);
+}
+[data-theme="dark"] .team-toggle-label.noturna {
+    background: rgba(79,70,229,.12);
+    border-color: rgba(79,70,229,.25);
+}
+[data-theme="dark"] .team-toggle-label.matutina {
+    background: rgba(217,119,6,.12);
+    border-color: rgba(217,119,6,.25);
+}
+
+.checkbox-divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
+}
+
 .tempo-total-display {
     padding: 10px 14px;
     background: var(--primary-50);
